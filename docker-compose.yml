@@ -3,8 +3,8 @@ version: "3"
 services:
   mongo:
     container_name: mongo
-    image: mongo:latest
-    restart: always
+    image: mongo:4.4.6
+    restart: unless-stopped
     ports:
       - 127.0.0.1:${MONGODB_PORT:-27017}:${MONGODB_PORT:-27017}
     volumes:
@@ -13,18 +13,21 @@ services:
 
   chatgpt_telegram_bot:
     container_name: chatgpt_telegram_bot
-    command: python3 -u bot/bot.py
-    restart: always
+    command: python /code/bot/bot.py
     build:
       context: "."
       dockerfile: Dockerfile
     depends_on:
       - mongo
+    volumes:
+      - ./bot:/code/bot
+      - ./config:/code/config
+    restart: unless-stopped
 
   mongo_express:
     container_name: mongo-express
     image: mongo-express:latest
-    restart: always
+    restart: unless-stopped
     ports:
       - 127.0.0.1:${MONGO_EXPRESS_PORT:-8081}:${MONGO_EXPRESS_PORT:-8081}
     environment:
