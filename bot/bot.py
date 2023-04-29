@@ -221,7 +221,6 @@ async def message_handle(update: Update, context: CallbackContext, message=None,
         db.set_user_attribute(user_id, "last_interaction", datetime.now())
 
         # in case of CancelledError
-        n_input_tokens, n_output_tokens = 0, 0
         current_model = db.get_user_attribute(user_id, "current_model")
 
         try:
@@ -242,23 +241,20 @@ async def message_handle(update: Update, context: CallbackContext, message=None,
             }[config.chat_modes[chat_mode]["parse_mode"]]
 
             chatgpt_instance = openai_utils.ChatGPT(model=current_model)
-            if config.enable_message_streaming:
-                gen = chatgpt_instance.send_message_stream(_message, dialog_messages=dialog_messages, chat_mode=chat_mode)
-            else:
-                answer, (n_input_tokens, n_output_tokens), n_first_dialog_messages_removed = await chatgpt_instance.send_message(
-                    _message,
-                    dialog_messages=dialog_messages,
-                    chat_mode=chat_mode
-                )
+            answer, n_first_dialog_messages_removed = await chatgpt_instance.send_message(
+                _message,
+                dialog_messages=dialog_messages,
+                chat_mode=chat_mode
+            )
 
-                async def fake_gen():
-                    yield "finished", answer, (n_input_tokens, n_output_tokens), n_first_dialog_messages_removed
+            async def fake_gen():
+                yield "finished", answer, n_first_dialog_messages_removed
 
-                gen = fake_gen()
+            gen = fake_gen()
 
             prev_answer = ""
             async for gen_item in gen:
-                status, answer, (n_input_tokens, n_output_tokens), n_first_dialog_messages_removed = gen_item
+                status, answer, n_first_dialog_messages_removed = gen_item
 
                 answer = answer[:4096]  # telegram message limit
 
@@ -286,12 +282,6 @@ async def message_handle(update: Update, context: CallbackContext, message=None,
                 dialog_id=None
             )
 
-            db.update_n_used_tokens(user_id, current_model, n_input_tokens, n_output_tokens)
-
-        except asyncio.CancelledError:
-            # note: intermediate token updates only work when enable_message_streaming=True (config.yml)
-            db.update_n_used_tokens(user_id, current_model, n_input_tokens, n_output_tokens)
-            raise
 
         except Exception as e:
             tb_string = traceback.format_exc()
