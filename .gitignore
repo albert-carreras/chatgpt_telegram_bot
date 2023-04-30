@@ -5,7 +5,8 @@ __pycache__/
 /bot/data/
 # C extensions
 *.so
-
+.idea
+.idea/
 # Distribution / packaging
 .Python
 build/

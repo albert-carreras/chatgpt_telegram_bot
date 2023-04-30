@@ -1,4 +1,3 @@
-import os
 import logging
 import asyncio
 import traceback
@@ -28,11 +27,11 @@ from telegram.ext import (
     AIORateLimiter,
     filters
 )
-from telegram.constants import ParseMode, ChatAction
+from telegram.constants import ParseMode
 
-import config
 import database
 import openai_utils
+import config
 
 
 # setup
