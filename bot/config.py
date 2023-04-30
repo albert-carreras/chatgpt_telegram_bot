@@ -19,7 +19,6 @@ use_chatgpt_api = config_yaml.get("use_chatgpt_api", True)
 env_allowed_users = os.environ.get('ALLOWED_TELEGRAM_USERNAMES', '')
 allowed_telegram_usernames = (lambda s: s.split(',') if s else [])(os.environ.get('ALLOWED_TELEGRAM_USERNAMES', ''))
 new_dialog_timeout = config_yaml.get("new_dialog_timeout", 600)
-enable_message_streaming = config_yaml.get("enable_message_streaming", True)
 return_n_generated_images = config_yaml.get("return_n_generated_images", 1)
 n_chat_modes_per_page = config_yaml.get("n_chat_modes_per_page", 5)
 mongodb_uri = os.environ["MONGO_URL"] if os.environ.get("MONGO_URL") else f"mongodb://mongo:{os.environ['MONGODB_PORT']}"
@@ -31,6 +30,3 @@ with open(config_dir / "chat_modes.yml", 'r') as f:
 # models
 with open(config_dir / "models.yml", 'r') as f:
     models = yaml.safe_load(f)
-
-# files
-help_group_chat_video_path = Path(__file__).parent.parent.resolve() / "static" / "help_group_chat.mp4"

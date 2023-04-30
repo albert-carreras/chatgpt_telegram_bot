@@ -7,10 +7,10 @@ from langchain.chains import LLMChain
 from langchain.chat_models import ChatOpenAI
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.prompts.prompt import PromptTemplate
-from langchain.schema import AIMessage, HumanMessage, SystemMessage
 from langchain.vectorstores import FAISS
 
 import ingest
+import generate_prompt
 import config
 
 openai.api_key = config.openai_api_key
@@ -25,18 +25,6 @@ OPENAI_COMPLETION_OPTIONS = {
 }
 
 embeddings = OpenAIEmbeddings(chunk_size=1000)
-
-
-def _generate_prompt_messages(dialog_messages, chat_mode):
-    prompt = config.chat_modes[chat_mode]["prompt_start"]
-
-    messages = [SystemMessage(content=prompt)]
-    for dialog_message in dialog_messages:
-        messages.append(HumanMessage(content=dialog_message["user"]))
-        messages.append(AIMessage(content=dialog_message["bot"]))
-
-    return messages
-
 
 class ChatGPT:
     def __init__(self, model="gpt-3.5-turbo"):
@@ -55,7 +43,7 @@ class ChatGPT:
         while answer is None:
             try:
                 if self.model in {"gpt-3.5-turbo", "gpt-4"}:
-                    messages = _generate_prompt_messages(dialog_messages, chat_mode)
+                    messages = generate_prompt.get_messages(dialog_messages, chat_mode)
                     r = await self._create_chain(messages=messages, message=message, model=self.model)
                     answer = r
                 else:
