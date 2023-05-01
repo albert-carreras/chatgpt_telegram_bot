@@ -5,8 +5,9 @@ __pycache__/
 /bot/data/
 # C extensions
 *.so
-.idea
-.idea/
+/.idea
+/.idea/
+.vscode
 # Distribution / packaging
 .Python
 build/

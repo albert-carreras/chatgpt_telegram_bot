@@ -8,7 +8,6 @@ from langchain.chat_models import ChatOpenAI
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.prompts.prompt import PromptTemplate
 from langchain.vectorstores import FAISS
-
 import ingest
 import generate_prompt
 import config
@@ -26,14 +25,19 @@ OPENAI_COMPLETION_OPTIONS = {
 
 embeddings = OpenAIEmbeddings(chunk_size=1000)
 
+
 class ChatGPT:
     def __init__(self, model="gpt-3.5-turbo"):
-        assert model in {"text-davinci-003", "gpt-3.5-turbo", "gpt-4"}, f"Unknown model: {model}"
+        assert model in {
+            "text-davinci-003",
+            "gpt-3.5-turbo",
+            "gpt-4",
+        }, f"Unknown model: {model}"
         self.model = model
         self.vector_db = ""
         ingest.ingest_docs(embeddings)
 
-    async def send_message(self, message, dialog_messages=[], chat_mode="assistant"):
+    async def send_message(self, message, dialog_messages=[], chat_mode="assistant", typing_fn=None):
         if chat_mode not in config.chat_modes.keys():
             raise ValueError(f"Chat mode {chat_mode} is not supported")
         self.vector_db = FAISS.load_local("faiss_index", embeddings)
@@ -44,7 +48,9 @@ class ChatGPT:
             try:
                 if self.model in {"gpt-3.5-turbo", "gpt-4"}:
                     messages = generate_prompt.get_messages(dialog_messages, chat_mode)
-                    r = await self._create_chain(messages=messages, message=message, model=self.model)
+                    r = await self._create_chain(
+                        messages=messages, message=message, model=self.model, typing_fn=typing_fn
+                    )
                     answer = r
                 else:
                     raise ValueError(f"Unknown model: {self.model}")
@@ -52,27 +58,29 @@ class ChatGPT:
             except openai.error.InvalidRequestError as error:
                 if len(dialog_messages) == 0:
                     raise ValueError(
-                        "Dialog messages is reduced to zero, but still has too many tokens to make completion") from error
+                        "Dialog messages is reduced to zero, but still has too many tokens to make completion"
+                    ) from error
 
                 # forget first message in dialog_messages
                 dialog_messages = dialog_messages[1:]
 
-        n_first_dialog_messages_removed = n_dialog_messages_before - len(dialog_messages)
+        n_first_dialog_messages_removed = n_dialog_messages_before - len(
+            dialog_messages
+        )
 
         return answer.strip(), n_first_dialog_messages_removed
 
-    async def _create_chain(self, messages, message, model="gpt-4"):
+    async def _create_chain(self, messages, message, model="gpt-4", typing_fn=None):
         template = f"""
             Current Date and Time: {datetime.now().strftime("%d-%B-%Y at %H:%M")} \n\n
             The following is Data about Albert, use it to provide better answers about him: {{albert_data}} \n\n
             The following is this Conversation's History: {{conversation_history}} \n\n
             Last User Prompt: {message} \n
-            Assistant Response: 
+            Assistant Response:
             """
 
         prompt_template = PromptTemplate(
-            input_variables=["conversation_history", "albert_data"],
-            template=template
+            input_variables=["conversation_history", "albert_data"], template=template
         )
 
         llm_chain = LLMChain(
@@ -82,6 +90,7 @@ class ChatGPT:
         )
 
         docs_data = self.vector_db.similarity_search(message)
+        typing_fn(action="typing")
         answer = llm_chain.run(conversation_history=messages, albert_data=docs_data)
 
         return answer

@@ -6,4 +6,5 @@ pymongo==4.3.3
 python-dotenv==0.21.0
 pydub==0.25.1
 langchain
+urllib3==1.25.11
 faiss-cpu
